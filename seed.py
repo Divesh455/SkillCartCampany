@@ -42,16 +42,21 @@ SCHEMA_FILE = os.environ.get("SCHEMA_FILE", DEFAULT_SCHEMA_PATH)
 
 
 def wait_for_db(engine, retries=20, delay=3):
+    url_obj = engine.url
+    print(f"Connecting to database at {url_obj.host}:{url_obj.port or 5432}/{url_obj.database}...", flush=True)
+    if url_obj.host == "db":
+        print("WARNING: Using default host 'db'. If on Render or production, ensure DATABASE_URL environment variable is set in environment settings!", flush=True)
+
     for attempt in range(1, retries + 1):
         try:
             with engine.connect() as conn:
                 conn.execute(text("SELECT 1"))
-            print("Database is ready.")
+            print("Database is ready.", flush=True)
             return
-        except OperationalError:
-            print(f"Database not ready yet (attempt {attempt}/{retries}), retrying in {delay}s...")
+        except Exception as e:
+            print(f"Database not ready yet (attempt {attempt}/{retries}): {e}. Retrying in {delay}s...", flush=True)
             time.sleep(delay)
-    print("Could not connect to database, exiting.")
+    print("Could not connect to database after maximum retries, exiting.", flush=True)
     sys.exit(1)
 
 
