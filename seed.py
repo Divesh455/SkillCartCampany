@@ -33,8 +33,12 @@ RAW_DATABASE_URL = os.environ.get(
 # with psycopg2 wants "postgresql://".
 DATABASE_URL = RAW_DATABASE_URL.replace("postgres://", "postgresql://", 1)
 
-DATA_FILE = os.environ.get("DATA_FILE", "/app/data/jobs_150.json")
-SCHEMA_FILE = os.environ.get("SCHEMA_FILE", "/app/schema.sql")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+DEFAULT_DATA_PATH = "/app/data/jobs_150.json" if os.path.exists("/app/data/jobs_150.json") else os.path.join(BASE_DIR, "data", "jobs_150.json")
+DEFAULT_SCHEMA_PATH = "/app/schema.sql" if os.path.exists("/app/schema.sql") else os.path.join(BASE_DIR, "schema.sql")
+
+DATA_FILE = os.environ.get("DATA_FILE", DEFAULT_DATA_PATH)
+SCHEMA_FILE = os.environ.get("SCHEMA_FILE", DEFAULT_SCHEMA_PATH)
 
 
 def wait_for_db(engine, retries=20, delay=3):

@@ -1,3 +1,53 @@
+# Deploy to Render
+
+You can deploy this application to **Render** using either **Render Blueprints (1-click setup)** or **Manual Setup** via the Render Dashboard.
+
+---
+
+## Option 1: Deploy with Render Blueprint (Recommended)
+
+1. Push your repository to **GitHub** or **GitLab**.
+2. Go to [Render Dashboard](https://dashboard.render.com/) and click **New +** -> **Blueprint**.
+3. Connect your repository.
+4. Render will automatically detect `render.yaml` and provision:
+   - A **PostgreSQL Database** (`careerdb`)
+   - A **Web Service** (`skillcart-company-api`) using Docker
+5. Click **Apply**. Render will provision both services and link `DATABASE_URL` automatically!
+
+---
+
+## Option 2: Manual Setup on Render
+
+### Step 1: Create a PostgreSQL Database
+1. Go to [Render Dashboard](https://dashboard.render.com/) -> **New +** -> **PostgreSQL**.
+2. Set **Name** (e.g. `careerdb`).
+3. Click **Create Database**.
+4. Once created, copy the **Internal Database URL** (e.g. `postgres://user:pass@dpg-xxx-a:5432/careerdb`).
+
+### Step 2: Create the Web Service
+1. Go to **New +** -> **Web Service**.
+2. Connect your repository.
+3. Select **Docker** as the environment (or **Python**).
+   - **Docker**: Render uses the included `Dockerfile` and `start.sh`.
+   - **Python**: Set Build Command to `pip install -r requirements.txt` and Start Command to `./start.sh`.
+4. Under **Environment Variables**, add:
+   - Key: `DATABASE_URL`
+   - Value: `<Internal Database URL from Step 1>`
+5. Click **Create Web Service**.
+
+---
+
+## Verification
+
+Once deployed, test your API endpoints:
+
+```bash
+curl https://<your-app-name>.onrender.com/health
+curl https://<your-app-name>.onrender.com/roles/summary
+```
+
+---
+
 # Deploy to Railway (simple version — one service)
 
 This is a simplified version: **one service** instead of two. On every
