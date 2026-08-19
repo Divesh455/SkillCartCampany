@@ -262,6 +262,10 @@ def health():
         conn.execute(text("SELECT 1"))
     return {"status": "ok"}
 
+@app.head("/health")
+def health_head():
+    return {"status": "ok"}
+
 
 @app.get("/roles/summary")
 def roles_summary():
