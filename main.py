@@ -7,6 +7,7 @@ from fastapi import FastAPI, HTTPException, Query, Response
 from pydantic import BaseModel, Field
 from sqlalchemy import create_engine, text
 from sqlalchemy.exc import IntegrityError
+from fastapi.middleware.cors import CORSMiddleware
 
 RAW_DATABASE_URL = os.environ.get(
     "DATABASE_URL", "postgresql://postgres:postgres@db:5432/careerdb"
@@ -21,6 +22,14 @@ app = FastAPI(
     title="AI Career Platform API",
     description="API over the seeded job postings database with company sync support.",
     version="1.1.0",
+)
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 COMPANY_FIELDS = (
