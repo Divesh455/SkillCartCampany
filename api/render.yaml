@@ -1,0 +1,11 @@
+services:
+  - type: web
+    name: skillcart-company-api
+    runtime: docker
+    dockerfilePath: api/Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set your Neon DB Connection String in Render Dashboard (e.g. postgresql://user:pass@ep-xxx.neon.tech/neondb?sslmode=require)
+

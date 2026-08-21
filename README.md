@@ -1,199 +1,59 @@
-# Deploy to Render
+# SkillCart Company — API & Database Architecture
 
-You can deploy this application to **Render** using either **Render Blueprints (1-click setup)** or **Manual Setup** via the Render Dashboard.
-
----
-
-## Option 1: Deploy with Render Blueprint (Recommended)
-
-1. Push your repository to **GitHub** or **GitLab**.
-2. Go to [Render Dashboard](https://dashboard.render.com/) and click **New +** -> **Blueprint**.
-3. Connect your repository.
-4. Render will automatically detect `render.yaml` and provision:
-   - A **PostgreSQL Database** (`careerdb`)
-   - A **Web Service** (`skillcart-company-api`) using Docker
-5. Click **Apply**. Render will provision both services and link `DATABASE_URL` automatically!
+This repository is organized into a clean separation of concerns with **API code** on one side and **Database code** on the other.
 
 ---
 
-## Option 2: Manual Setup on Render
+## Workspace Structure
 
-### Step 1: Create a PostgreSQL Database
-1. Go to [Render Dashboard](https://dashboard.render.com/) -> **New +** -> **PostgreSQL**.
-2. Set **Name** (e.g. `careerdb`).
-3. Click **Create Database**.
-4. Once created, copy the **Internal Database URL** (e.g. `postgres://user:pass@dpg-xxx-a:5432/careerdb`).
-
-### Step 2: Create the Web Service
-1. Go to **New +** -> **Web Service**.
-2. Connect your repository.
-3. Select **Docker** as the environment (or **Python**).
-   - **Docker**: Render uses the included `Dockerfile` and `start.sh`.
-   - **Python**: Set Build Command to `pip install -r requirements.txt` and Start Command to `./start.sh`.
-4. Under **Environment Variables**, add:
-   - Key: `DATABASE_URL`
-   - Value: `<Internal Database URL from Step 1>`
-5. Click **Create Web Service**.
-
----
-
-## Verification
-
-Once deployed, test your API endpoints:
-
-```bash
-curl https://<your-app-name>.onrender.com/health
-curl https://<your-app-name>.onrender.com/roles/summary
+```text
+SkillCartCampany/
+├── api/                       # API Codebase
+│   ├── main.py                # FastAPI endpoints, models, & routes
+│   ├── requirements.txt       # Python dependencies
+│   ├── Dockerfile             # Container definition for API
+│   ├── start.sh               # Service startup script
+│   ├── render.yaml            # Render deployment spec
+│   ├── railway.json           # Railway deployment spec
+│   └── .dockerignore          # Docker ignore file
+│
+├── database/                  # Database Codebase
+│   ├── schema.sql             # SQL table definitions
+│   ├── seed.py                # Database migration & seeding script
+│   └── data/
+│       └── jobs_150.json      # Job postings dataset (150 records)
+│
+├── NEON_SETUP.md              # Complete guide to deploying DB on Neon
+└── README.md                  # Project overview & documentation
 ```
 
 ---
 
-# Deploy to Railway (simple version — one service)
+## 1. Database Setup (Neon DB)
 
-This is a simplified version: **one service** instead of two. On every
-deploy it seeds the database first, then starts the API. No separate
-"seed" service, no restart-policy fiddling.
+To deploy your database exclusively on **[Neon DB](https://neon.tech)**:
 
-Tested locally end-to-end before being handed to you: fresh Postgres →
-schema created → 150 jobs loaded → API served real responses.
+1. Refer to [NEON_SETUP.md](NEON_SETUP.md) for full setup instructions.
+2. Obtain your Neon connection string (`postgresql://<user>:<password>@<ep-id>.neon.tech/neondb?sslmode=require`).
+3. Run the database migration and seeder:
+   ```powershell
+   $env:DATABASE_URL="postgresql://<user>:<password>@<ep-id>.neon.tech/neondb?sslmode=require"
+   python database/seed.py
+   ```
 
-## Steps
+---
 
-```bash
-npm i -g @railway/cli
-railway login
-
-cd railway-app
-railway init                      # name your project
-
-railway add -d postgres           # adds the database
-
-railway up                        # builds and deploys THIS folder as one service
-```
-
-After `railway up` finishes, set the database connection:
+## 2. API Setup & Local Running
 
 ```bash
-railway variables set 'DATABASE_URL=${{Postgres.DATABASE_URL}}'
-```
-(Single quotes — PowerShell mangles `${{ }}` inside double quotes.)
+# Navigate to API directory
+cd api
 
-This triggers a fresh deploy automatically. Watch it:
+# Install dependencies
+pip install -r requirements.txt
 
-```bash
-railway logs
-```
-
-You should see, in order:
-```
->>> Step 1: applying schema + seeding data
-Applied schema (12 statements).
-Seeded 150 job records into the database.
->>> Step 2: starting API server
-INFO:     Uvicorn running on http://0.0.0.0:8000
+# Start API server
+uvicorn main:app --reload
 ```
 
-## Get a public URL
-
-In the Railway dashboard: click your service → **Settings** →
-**Networking** → **Generate Domain**.
-
-Test it:
-```bash
-curl https://<your-app>.up.railway.app/health
-curl https://<your-app>.up.railway.app/roles/summary
-```
-
-## Company write endpoint
-
-The API now includes `POST /companies/upsert` to create a company or
-update an existing one and sync its related jobs in the same request.
-
-- If `company.id` is sent, that company row is updated.
-- If `company.id` is omitted and `company.company_name` already exists,
-  that company row is updated.
-- If a job inside `jobs` has an `id`, that job is updated.
-- If a job inside `jobs` does not have an `id`, a new job is created.
-- If `replace_existing_jobs` is `true`, any existing jobs for the
-  company that are not included in the request are deleted.
-
-Example payload:
-
-```json
-{
-  "company": {
-    "company_name": "Acme Technologies Pvt. Ltd.",
-    "industry": "Software",
-    "company_size": "201-500 employees",
-    "headquarters": "Bengaluru, Karnataka, India",
-    "website": "https://acme.example.com",
-    "linkedin_url": "https://www.linkedin.com/company/acme",
-    "logo_url": "https://acme.example.com/logo.png",
-    "description": "Product engineering company."
-  },
-  "jobs": [
-    {
-      "job_title": "Backend Developer",
-      "department": "Engineering",
-      "employment_type": "Full-time",
-      "work_mode": "Hybrid",
-      "location": "Bengaluru, Karnataka, India",
-      "openings": 2,
-      "experience_min": 3,
-      "experience_max": 5,
-      "salary_min": 1200000,
-      "salary_max": 1800000,
-      "currency": "INR",
-      "project_role": "Backend API Developer",
-      "project_role_description": "Build internal and public APIs.",
-      "summary": "Python backend role.",
-      "education": "Bachelor's degree in Computer Science or similar.",
-      "additional_information": "Immediate joiners preferred.",
-      "posted_date": "2026-07-29",
-      "application_deadline": "2026-08-15",
-      "status": "OPEN",
-      "responsibilities": [
-        "Build API services",
-        "Review pull requests"
-      ],
-      "professional_skills": [
-        "System design",
-        "Debugging"
-      ],
-      "required_skills": [
-        "Python",
-        "FastAPI",
-        "PostgreSQL"
-      ],
-      "preferred_skills": [
-        "Docker",
-        "AWS"
-      ],
-      "benefits": [
-        "Health insurance",
-        "Flexible hours"
-      ]
-    }
-  ],
-  "replace_existing_jobs": false
-}
-```
-
-## If the build still fails
-
-Run:
-```bash
-railway logs --build
-```
-This shows the actual build error (package install failure, etc.) —
-paste that exact text if you need help, not just "Deploy failed".
-
-## Files
-
-- `Dockerfile` — builds one image with everything
-- `start.sh` — runs `seed.py` then starts the API (`CMD` in the Dockerfile)
-- `seed.py` — creates the schema (if missing) and loads `data/jobs_150.json`
-- `main.py` — the FastAPI app (`/health`, `/jobs`, `/companies`, etc.)
-- `schema.sql` — table definitions
-- `railway.json` — tells Railway explicitly to use the Dockerfile
-  (avoids any auto-detection ambiguity)
+Interactive OpenAPI docs will be available at [http://localhost:8000/docs](http://localhost:8000/docs).
