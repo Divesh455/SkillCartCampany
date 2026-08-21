@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: skillcart-company-api
+    runtime: docker
+    dockerfilePath: Dockerfile
+    plan: free
+    healthCheckPath: /health
+    envVars:
+      - key: DATABASE_URL
+        sync: false # Set your Neon DB Connection String in Render Dashboard
